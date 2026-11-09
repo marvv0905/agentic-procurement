@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "seed": 4110,
+  "suppliers": 3,
+  "listings_per_supplier": 12,
+  "scenarios": {
+    "normal": true,
+    "low_stock": true,
+    "warranty_failure": true,
+    "unknown_delivery": true,
+    "hidden_shipping": true,
+    "over_budget": false,
+    "price_change": false,
+    "stock_change": false,
+    "duplicate": false,
+    "timeout": false,
+    "injection_text": false,
+    "access_blocked": false,
+    "insufficient_quotations": false,
+    "conflicting_evidence": false
+  }
+}

@@ -1,0 +1,34 @@
+[project]
+name = "purchasepilot"
+version = "0.1.0"
+description = "PurchasePilot: browser-assisted procurement agent (student prototype)"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pydantic>=2.8,<3",
+    "sqlalchemy>=2.0,<3",
+    "streamlit>=1.38",
+    "fastapi>=0.112",
+    "jinja2>=3.1",
+    "uvicorn>=0.30",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+]
+
+# Stagehand is intentionally NOT pinned here. It is installed and validated
+# during the Phase 1 feasibility spike (see README). Add it once the pinned
+# SDK version and local Chromium setup are confirmed.
+#
+# [project.optional-dependencies]
+# browser = ["stagehand"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.uv]
+package = false

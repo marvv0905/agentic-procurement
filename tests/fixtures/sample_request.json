@@ -1,0 +1,17 @@
+{
+  "request_id": "REQ_001",
+  "requester": "alice",
+  "department": "engineering",
+  "category": "monitor",
+  "quantity": 6,
+  "currency": "HKD",
+  "max_total_cost_minor": 1200000,
+  "deadline": "2026-11-20",
+  "mandatory": {
+    "screen_inches_min": 27,
+    "resolution": "2560x1440",
+    "connectors": ["HDMI", "DisplayPort"],
+    "warranty_months_min": 36
+  },
+  "preferences": {}
+}

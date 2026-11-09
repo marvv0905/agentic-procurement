@@ -1,0 +1,18 @@
+{
+  "version": "policy_v1",
+  "currency": "HKD",
+  "supplier_allowlist": ["SUP_A", "SUP_B", "SUP_C"],
+  "approval_threshold_minor": 1000000,
+  "quotation_target": 3,
+  "rules": {
+    "allowlist_only": true,
+    "mandatory_specs_required": true,
+    "full_quantity_required": true,
+    "unknown_not_fail": true,
+    "budget_ceiling_enforced": true,
+    "human_approval_always_required": true,
+    "quotation_shortfall_disclosed": true,
+    "lowest_verified_total_selected": true,
+    "material_change_invalidates_approval": true
+  }
+}
