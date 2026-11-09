@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>{{ title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}PurchasePilot mock world{% endblock %}</title>
 </head>
 <body>
-  <h1>{{ title }}</h1>
-  {% block content %}{% endblock %}
+{% block content %}{% endblock %}
 </body>
 </html>

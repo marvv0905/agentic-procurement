@@ -5,11 +5,6 @@ Usage: ``uv run python scripts/seed_demo.py``
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from procurement import seed as seed_module
 from procurement.repository import (
     Supplier,

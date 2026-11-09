@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ supplier.name }} — products{% endblock %}
+{% block content %}
+<h1>{{ supplier.name }} — available products</h1>
+{% for p in listings %}
+  <div class="product" data-product-id="{{ p.product_id }}">
+    <h2 class="model"><a href="/supplier/{{ supplier.id }}/product/{{ p.product_id }}">{{ p.model_name }}</a></h2>
+    <span class="screen">{{ p.screen_size }} inch</span>
+    <span class="resolution">{{ p.resolution }}</span>
+    <span class="connectors">Ports: {{ p.connectors | join(", ") }}</span>
+    <span class="warranty">Warranty: {{ p.warranty_months }} months</span>
+    <span class="price">{{ p.price }}</span>
+    <span class="stock">{{ p.available_units }} units available</span>
+    <span class="shipping">Shipping: {{ p.shipping }}</span>
+    <span class="delivery">Delivers in {{ p.delivery }}</span>
+  </div>
+  <hr />
+{% endfor %}
+<p><a href="/supplier/{{ supplier.id }}/terms">Shipping &amp; delivery terms</a></p>
+{% endblock %}

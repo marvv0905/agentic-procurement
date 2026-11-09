@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ supplier.name }} — catalogue{% endblock %}
+{% block content %}
+<h1>{{ supplier.name }} — monitor catalogue</h1>
+<table border="1" cellpadding="6">
+  <thead>
+    <tr>
+      <th>Model</th><th>Screen size</th><th>Resolution</th><th>Connectors</th>
+      <th>Stand</th><th>Warranty</th><th>Unit price</th><th>In stock</th>
+      <th>Shipping</th><th>Delivery</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in listings %}
+    <tr>
+      <td><a href="/supplier/{{ supplier.id }}/product/{{ p.product_id }}">{{ p.model_name }}</a></td>
+      <td>{{ p.screen_size }} in</td>
+      <td>{{ p.resolution }}</td>
+      <td>{{ p.connectors | join(", ") }}</td>
+      <td>{{ p.stand_type }}</td>
+      <td>{{ p.warranty_months }} months ({{ p.warranty_provider }})</td>
+      <td>{{ p.price }}</td>
+      <td>{{ p.available_units }}</td>
+      <td>{{ p.shipping }}</td>
+      <td>{{ p.delivery }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p><a href="/supplier/{{ supplier.id }}/terms">Shipping &amp; delivery terms</a></p>
+{% endblock %}

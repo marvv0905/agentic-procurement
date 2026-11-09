@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}PurchasePilot mock world{% endblock %}
+{% block content %}
+<h1>PurchasePilot mock world</h1>
+<p>Synthetic supplier sites and requisition portal (no real purchases).</p>
+<ul>
+  {% for s in suppliers %}
+  <li><a href="/supplier/{{ s.id }}/catalog">{{ s.name }} ({{ s.id }})</a></li>
+  {% endfor %}
+</ul>
+<p><a href="/portal">Mock requisition portal</a></p>
+{% endblock %}

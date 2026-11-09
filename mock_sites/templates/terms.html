@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ supplier.name }} — shipping terms{% endblock %}
+{% block content %}
+<h1>{{ supplier.name }} — shipping &amp; delivery terms</h1>
+<ul>
+  <li>Standard shipping fee: {{ shipping_standard }}</li>
+  <li>Delivery within {{ delivery_days }} business days of dispatch</li>
+</ul>
+<p><a href="/supplier/{{ supplier.id }}/catalog">Back to catalogue</a></p>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ supplier.name }} — inventory{% endblock %}
+{% block content %}
+<h1>{{ supplier.name }} — inventory</h1>
+<ul>
+{% for p in listings %}
+  <li>
+    <dl>
+      <dt>Product</dt><dd>{{ p.model_name }}</dd>
+      <dt>Display</dt><dd>{{ p.screen_size }}" {{ p.resolution }}</dd>
+      <dt>Ports</dt><dd>{{ p.connectors | join(", ") }}</dd>
+      <dt>Warranty</dt><dd>{{ p.warranty_months }} months by {{ p.warranty_provider }}</dd>
+      <dt>Unit cost</dt><dd>{{ p.price }}</dd>
+      <dt>Availability</dt><dd>{{ p.available_units }}</dd>
+      <dt>Freight</dt><dd>{{ p.shipping }}</dd>
+      <dt>Lead time</dt><dd>{{ p.delivery }}</dd>
+    </dl>
+  </li>
+{% endfor %}
+</ul>
+<p><a href="/supplier/{{ supplier.id }}/terms">Shipping &amp; delivery terms</a></p>
+{% endblock %}

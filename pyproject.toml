@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "purchasepilot"
 version = "0.1.0"
@@ -12,6 +16,8 @@ dependencies = [
     "jinja2>=3.1",
     "uvicorn>=0.30",
     "python-dotenv>=1.0",
+    "stagehand>=4.4,<5",
+    "openai>=1.0",
 ]
 
 [dependency-groups]
@@ -19,16 +25,9 @@ dev = [
     "pytest>=8.2",
 ]
 
-# Stagehand is intentionally NOT pinned here. It is installed and validated
-# during the Phase 1 feasibility spike (see README). Add it once the pinned
-# SDK version and local Chromium setup are confirmed.
-#
-# [project.optional-dependencies]
-# browser = ["stagehand"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 
-[tool.uv]
-package = false
+[tool.hatch.build.targets.wheel]
+packages = ["procurement", "mock_sites"]
