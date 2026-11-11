@@ -19,7 +19,7 @@ def test_absent_facts_default_none(make_offer):
     assert offer.unit_price_minor is None
     assert offer.available_quantity is None
     assert offer.warranty_months is None
-    assert offer.connectors == ["HDMI", "DisplayPort"]
+    assert offer.attributes["connectors"] == ["HDMI", "DisplayPort"]
 
 
 def test_eligibility_pass_property():

@@ -14,7 +14,8 @@ from typing import Any
 
 from openai import AsyncOpenAI
 
-from .prompts import PROMPT_VERSION
+from ..schemas import RequestDraft
+from .prompts import PROMPT_VERSION, build_request_prompt
 
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-chat"
@@ -68,3 +69,16 @@ class ConfigurableLLM:
             **options,
         )
         return json.loads(response.choices[0].message.content or "{}")
+
+    async def update_draft(
+        self, text: str, current_draft: RequestDraft | None = None
+    ) -> RequestDraft:
+        """Parse the latest message into an updated ``RequestDraft``.
+
+        ``current_draft`` carries forward already-confirmed fields, so follow-up
+        messages (corrections, answers to clarifications) merge instead of
+        starting over.
+        """
+        prompt = build_request_prompt(text, current_draft)
+        data = await self.structured(prompt, RequestDraft.model_json_schema())
+        return RequestDraft.model_validate(data)

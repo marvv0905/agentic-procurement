@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -38,13 +39,17 @@ class ValidationStatus(str, Enum):
 
 
 class RequestRequirements(BaseModel):
-    """Mandatory attributes for the selected category (office monitors)."""
+    """Mandatory attributes for the selected category.
+
+    Category-specific attributes live in ``attributes`` (keyed by the attribute
+    names declared in ``procurement.catalog``); ``warranty_months_min`` is
+    universal across categories.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    screen_inches_min: int | None = None
-    resolution: str | None = None
-    connectors: list[str] = Field(default_factory=list)
+    category: str
+    attributes: dict[str, Any] = Field(default_factory=dict)
     warranty_months_min: int | None = None
 
 
@@ -56,14 +61,40 @@ class PurchaseRequest(BaseModel):
     request_id: str
     requester: str
     department: str
-    category: str = "monitor"
+    category: str
     quantity: int = Field(gt=0)
     currency: Currency = Currency.HKD
     max_total_cost_minor: int = Field(ge=0)
     deadline: date
-    mandatory: RequestRequirements = Field(default_factory=RequestRequirements)
+    mandatory: RequestRequirements
     preferences: dict[str, str] = Field(default_factory=dict)
     created_at: datetime
+
+
+class RequestDraft(BaseModel):
+    """Raw parse of a free-text request, before confirmation.
+
+    Fields are optional because *absence is meaningful*: the LLM must leave a
+    field it cannot determine as ``None`` (and flag it in ``unclear_fields``)
+    rather than invent a default. ``out_of_scope`` collects items the system
+    does not procure; ``answer`` is set when the user asked a question about the
+    form instead of providing request details.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    category: str | None = None
+    quantity: int | None = None
+    attributes: dict[str, Any] = Field(default_factory=dict)
+    warranty_months_min: int | None = None
+    preferences: dict[str, str] = Field(default_factory=dict)
+    max_total_hkd: str | int | float | None = None
+    deadline: str | None = None
+    department: str | None = None
+    out_of_scope: list[str] = Field(default_factory=list)
+    clarification_needed: bool = False
+    unclear_fields: list[str] = Field(default_factory=list)
+    answer: str | None = None
 
 
 class OfferEvidence(BaseModel):
@@ -71,7 +102,8 @@ class OfferEvidence(BaseModel):
 
     Absent facts must be ``None`` with an explanation — never zero, empty string,
     or an invented default. ``unknown_fields`` records which facts could not be
-    extracted and why.
+    extracted and why. ``attributes`` holds the category-specific facts declared
+    in ``procurement.catalog``.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -79,13 +111,12 @@ class OfferEvidence(BaseModel):
     offer_id: str
     supplier_id: str
     product_id: str
+    category: str
     currency: Currency = Currency.HKD
     unit_price_minor: int | None = None
     available_quantity: int | None = None
     shipping_minor: int | None = None
-    screen_inches: int | None = None
-    resolution: str | None = None
-    connectors: list[str] | None = None
+    attributes: dict[str, Any] = Field(default_factory=dict)
     warranty_months: int | None = None
     delivery_by: date | None = None
     evidence_ids: list[str] = Field(default_factory=list)

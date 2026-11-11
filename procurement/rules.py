@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from datetime import date
 
+from .catalog import BOOL, CATEGORIES, INT, LIST, STR, AttributeSpec
 from .money import verified_total
 from .schemas import (
     ApprovalRole,
@@ -64,6 +65,41 @@ def _check(
     )
 
 
+def _attribute_check(
+    spec: AttributeSpec,
+    req_value: object,
+    offer_value: object,
+) -> FieldValidation:
+    """Three-valued check of one category attribute against the request.
+
+    ``offer_value`` missing -> UNKNOWN (never FAIL). Otherwise compare by the
+    attribute's declared type.
+    """
+    name = spec.name
+    if offer_value is None:
+        return _check(name, ValidationStatus.UNKNOWN, f"{name} not extracted")
+
+    if spec.type == INT:
+        ok = offer_value >= req_value
+        reason = "meets minimum" if ok else "below minimum"
+    elif spec.type == STR:
+        ok = offer_value == req_value
+        reason = "matches requirement" if ok else "does not match requirement"
+    elif spec.type == BOOL:
+        ok = bool(offer_value) == bool(req_value)
+        reason = "matches requirement" if ok else "does not match requirement"
+    elif spec.type == LIST:
+        required = req_value if isinstance(req_value, list) else [req_value]
+        missing = [c for c in required if c not in offer_value]
+        ok = not missing
+        reason = "all required values present" if ok else f"missing: {', '.join(missing)}"
+    else:  # pragma: no cover - defensive
+        return _check(name, ValidationStatus.UNKNOWN, f"unknown attribute type {spec.type}")
+
+    status = ValidationStatus.PASS if ok else ValidationStatus.FAIL
+    return _check(name, status, reason)
+
+
 def validate_offer(
     request: PurchaseRequest,
     offer: OfferEvidence,
@@ -71,42 +107,36 @@ def validate_offer(
 ) -> EligibilityResult:
     """Validate a single offer against the request and (optional) budget.
 
-    Checks: mandatory specifications (rule 2), quantity sufficiency (rule 3),
-    unknown mandatory information (rule 4), and budget ceilings (rule 5).
+    Checks: category match + mandatory specifications (rule 2), quantity
+    sufficiency (rule 3), unknown mandatory information (rule 4), and budget
+    ceilings (rule 5). Category attributes are validated generically against the
+    catalog spec.
     """
     checks: list[FieldValidation] = []
     req = request.mandatory
 
-    # Mandatory specification: screen size.
-    if req.screen_inches_min is not None:
-        if offer.screen_inches is None:
-            checks.append(_check("screen_inches", ValidationStatus.UNKNOWN, "screen size not extracted"))
-        elif offer.screen_inches >= req.screen_inches_min:
-            checks.append(_check("screen_inches", ValidationStatus.PASS, "screen size meets minimum"))
-        else:
-            checks.append(_check("screen_inches", ValidationStatus.FAIL, "screen size below minimum"))
+    spec = CATEGORIES.get(req.category)
+    if spec is None:
+        checks.append(
+            _check("category", ValidationStatus.FAIL, f"unknown category {req.category!r}")
+        )
+    else:
+        if offer.category != req.category:
+            checks.append(
+                _check(
+                    "category",
+                    ValidationStatus.FAIL,
+                    f"offer category {offer.category!r} does not match request {req.category!r}",
+                )
+            )
+        for attr in spec.attributes:
+            req_value = req.attributes.get(attr.name)
+            if req_value is None:
+                # Not requested by the requester; nothing to enforce.
+                continue
+            checks.append(_attribute_check(attr, req_value, offer.attributes.get(attr.name)))
 
-    # Mandatory specification: resolution.
-    if req.resolution:
-        if offer.resolution is None:
-            checks.append(_check("resolution", ValidationStatus.UNKNOWN, "resolution not extracted"))
-        elif offer.resolution == req.resolution:
-            checks.append(_check("resolution", ValidationStatus.PASS, "resolution matches requirement"))
-        else:
-            checks.append(_check("resolution", ValidationStatus.FAIL, "resolution does not match requirement"))
-
-    # Mandatory specification: connectors.
-    if req.connectors:
-        if offer.connectors is None:
-            checks.append(_check("connectors", ValidationStatus.UNKNOWN, "connectors not extracted"))
-        else:
-            missing = [c for c in req.connectors if c not in offer.connectors]
-            if missing:
-                checks.append(_check("connectors", ValidationStatus.FAIL, f"missing connectors: {', '.join(missing)}"))
-            else:
-                checks.append(_check("connectors", ValidationStatus.PASS, "all required connectors present"))
-
-    # Mandatory specification: warranty.
+    # Warranty (universal across categories).
     if req.warranty_months_min is not None:
         if offer.warranty_months is None:
             checks.append(_check("warranty_months", ValidationStatus.UNKNOWN, "warranty not extracted"))

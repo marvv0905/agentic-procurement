@@ -51,6 +51,37 @@ def to_major(minor: int) -> Decimal:
     return Decimal(minor) / MINOR_UNITS_PER_MAJOR
 
 
+def parse_hkd_minor(value: str | int | Decimal | None) -> int | None:
+    """Best-effort parse of a human/LLM-written HKD amount into minor units.
+
+    Handles ``"HK$1,800.00"``, ``"1,800.00"``, ``"1800"``, ``1800``, and
+    ``Decimal``. Returns ``None`` (rather than raising) when the value is not a
+    clean amount, so a garbled extraction is recorded as unknown instead of
+    crashing persistence.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    s = (
+        str(value)
+        .strip()
+        .replace("HK$", "")
+        .replace("HKD", "")
+        .replace("$", "")
+        .replace(",", "")
+        .strip()
+    )
+    try:
+        major = Decimal(s)
+    except (InvalidOperation, ValueError):
+        return None
+    minor = major * MINOR_UNITS_PER_MAJOR
+    if minor != minor.to_integral_value():
+        return None
+    return int(minor)
+
+
 def format_hkd(minor: int) -> str:
     """Format minor units as a human-readable HKD string."""
     return f"HK${to_major(minor):,.2f}"

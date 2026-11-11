@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
+from procurement.catalog import CATEGORIES, BOOL, LIST, get_category
 from procurement.money import format_hkd
 from procurement.seed import generate
 
@@ -38,14 +39,29 @@ def _listing(pid: str):
     return next((l for l in SEED_DATA.listings if l.product_id == pid), None)
 
 
+def _fmt_value(attr, value) -> str:
+    if value is None:
+        return "Not specified"
+    if attr.type == BOOL:
+        return "Yes" if value else "No"
+    if attr.type == LIST:
+        return ", ".join(value)
+    return str(value)
+
+
 def _display_listing(l):
+    spec = get_category(l.category)
+    attributes_display = []
+    if spec is not None:
+        for attr in spec.attributes:
+            attributes_display.append((attr.display_name, _fmt_value(attr, l.attributes.get(attr.name))))
+
     return {
         "product_id": l.product_id,
         "model_name": l.model_name,
-        "screen_size": l.screen_size,
-        "resolution": l.resolution,
-        "connectors": l.connectors,
-        "stand_type": l.stand_type,
+        "category": l.category,
+        "category_label": spec.label if spec else l.category,
+        "attributes_display": attributes_display,
         "warranty_months": l.warranty_months,
         "warranty_provider": l.warranty_provider,
         "price": format_hkd(l.unit_price_minor),

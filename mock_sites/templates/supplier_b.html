@@ -3,11 +3,12 @@
 {% block content %}
 <h1>{{ supplier.name }} — available products</h1>
 {% for p in listings %}
-  <div class="product" data-product-id="{{ p.product_id }}">
+  <div class="product" data-product-id="{{ p.product_id }}" data-category="{{ p.category }}">
     <h2 class="model"><a href="/supplier/{{ supplier.id }}/product/{{ p.product_id }}">{{ p.model_name }}</a></h2>
-    <span class="screen">{{ p.screen_size }} inch</span>
-    <span class="resolution">{{ p.resolution }}</span>
-    <span class="connectors">Ports: {{ p.connectors | join(", ") }}</span>
+    <span class="category">{{ p.category_label }}</span>
+    {% for label, value in p.attributes_display %}
+      <span class="spec">{{ label }}: {{ value }}</span>
+    {% endfor %}
     <span class="warranty">Warranty: {{ p.warranty_months }} months</span>
     <span class="price">{{ p.price }}</span>
     <span class="stock">{{ p.available_units }} units available</span>

@@ -2,12 +2,11 @@
 {% block title %}{{ p.model_name }}{% endblock %}
 {% block content %}
 <h1>{{ p.model_name }}</h1>
-<p>Product ID: {{ p.product_id }} — supplied by {{ supplier.name }}</p>
+<p>Product ID: {{ p.product_id }} — {{ p.category_label }} — supplied by {{ supplier.name }}</p>
 <ul>
-  <li>Screen size: {{ p.screen_size }} inches</li>
-  <li>Resolution: {{ p.resolution }}</li>
-  <li>Connectors: {{ p.connectors | join(", ") }}</li>
-  <li>Stand: {{ p.stand_type }}</li>
+  {% for label, value in p.attributes_display %}
+    <li>{{ label }}: {{ value }}</li>
+  {% endfor %}
   <li>Warranty: {{ p.warranty_months }} months ({{ p.warranty_provider }})</li>
   <li>Unit price: {{ p.price }}</li>
   <li>In stock: {{ p.available_units }}</li>

@@ -3,6 +3,7 @@ import pytest
 from procurement.money import (
     CurrencyError,
     format_hkd,
+    parse_hkd_minor,
     parse_minor,
     to_major,
     verified_total,
@@ -38,3 +39,16 @@ def test_verified_total_matches_proposal_example():
 def test_verified_total_rejects_nonpositive_quantity():
     with pytest.raises(CurrencyError):
         verified_total(180000, 0)
+
+
+def test_parse_hkd_minor_handles_formats():
+    assert parse_hkd_minor("HK$3,300.33") == 330033
+    assert parse_hkd_minor("1,800.00") == 180000
+    assert parse_hkd_minor("1800") == 180000
+    assert parse_hkd_minor(180000) == 180000
+
+
+def test_parse_hkd_minor_returns_none_for_garbage():
+    assert parse_hkd_minor("not a price") is None
+    assert parse_hkd_minor("HK$1.005") is None
+    assert parse_hkd_minor(None) is None

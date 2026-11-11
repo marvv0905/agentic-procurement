@@ -1,8 +1,8 @@
 # PurchasePilot
 
-Browser-assisted procurement agent — student prototype (ISOM4110 Topic 12).
+Browser-assisted procurement agent 
 
-PurchasePilot converts an employee's equipment request into a traceable supplier
+AgenticProcurement onverts an employee's equipment request into a traceable supplier
 comparison and an approval-ready purchase requisition. It researches supplier
 websites with Stagehand, extracts product evidence, applies explicit purchasing
 rules in Python, and explains its recommendation. A human reviews the exact
@@ -13,42 +13,16 @@ orders, process payments, sign contracts, or guarantee supplier fulfillment.
 
 ## Status
 
-The **deterministic foundation** (schemas, rules, state machine, approvals,
-seed data) is implemented and tested. Stagehand v4 is wired to local Chrome
-through a DeepSeek bring-your-own-LLM callback, and the synthetic supplier
-sites render real seeded data. Live LLM calls need a `DEEPSEEK_API_KEY`.
+This repository currently contains the **deterministic foundation** plus typed
+stubs for the browser, LLM, and portal layers. Stagehand and live LLM calls are
+intentionally not wired yet (Phase 1 feasibility spike).
 
 ## Setup
 
 ```bash
-uv sync                       # creates .venv (Python 3.12) + installs deps
-cp .env.example .env          # then add your DEEPSEEK_API_KEY
-uv run pytest                 # run the deterministic test suite
+uv sync          # creates .venv with Python 3.12 and installs dependencies
+uv run pytest    # run the deterministic test suite
 ```
-
-## Browser smoke test (Phase 1 spike)
-
-```bash
-# terminal 1: start the synthetic supplier sites
-uv run uvicorn mock_sites.server:app --port 8100
-
-# terminal 2: extract a monitor from the synthetic catalogue
-uv run python scripts/browser_smoke_test.py --target local
-
-# (optional) sanity-check Chrome + DeepSeek against a public page first
-uv run python scripts/browser_smoke_test.py --target public
-```
-
-A visible Chrome window opens so you can watch each step.
-
-## Run the Streamlit UI
-
-```bash
-uv run streamlit run app.py
-```
-
-Opens at http://localhost:8501. The UI is a thin shell delegating to the
-controller; the request flow is wired in a later phase.
 
 ## Layout
 
@@ -63,11 +37,11 @@ procurement/               # deterministic core + typed stubs
   approvals.py             # proposal hashing + approval binding
   seed.py                  # seeded synthetic data generator (seed 4110)
   repository.py            # SQLAlchemy models + SQLite session
-  tools/                   # browser (Stagehand), suppliers, portal
-  llm/                     # DeepSeek adapter + Stagehand generate callback
-mock_sites/                # FastAPI supplier sites + mock portal (renders seed)
+  tools/                   # typed tool-contract stubs
+  llm/                     # configurable LLM adapter stub + prompts
+mock_sites/                # FastAPI supplier sites + mock portal
 data/                      # policy + seed configuration
-scripts/                   # seed_demo.py, run_evaluation.py, browser_smoke_test.py
+scripts/                   # seed_demo.py, run_evaluation.py
 tests/                     # unit + integration + fixtures
 ```
 
@@ -82,10 +56,8 @@ tests/                     # unit + integration + fixtures
   seed data or hidden fixtures.
 - All money is integer HKD minor units (cents); no floating-point arithmetic.
 
-## Phase 1 feasibility spike
+## Phase 1 feasibility spike (not yet done)
 
-Stagehand v4 + local Chrome + DeepSeek callback are wired, and the synthetic
-sites render. Remaining before full interface work: confirm a real
-`observe` / `act` / `extract` round-trip (the browser smoke test above) and
-validate the exact `DEEPSEEK_MODEL` string against DeepSeek's API. See the
-project proposal, §15.
+Install a pinned Stagehand/Python configuration, confirm local Chromium works,
+and verify a real `observe` / `act` / `extract` round-trip against a mock site
+before building the full interface. See the project proposal, §15.

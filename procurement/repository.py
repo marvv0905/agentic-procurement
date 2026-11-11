@@ -142,3 +142,78 @@ def init_db(engine) -> None:
 
 def session_factory(engine):
     return sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+def init_and_seed(engine) -> None:
+    """Create tables and seed suppliers (idempotent)."""
+    init_db(engine)
+    from .seed import generate
+
+    data = generate()
+    Session = session_factory(engine)
+    with Session() as session:
+        for sup in data.suppliers:
+            if session.get(Supplier, sup.id) is None:
+                session.add(
+                    Supplier(
+                        id=sup.id,
+                        name=sup.name,
+                        allowed_origin=sup.origin,
+                        approval_status="allowed",
+                    )
+                )
+        session.commit()
+
+
+def _to_int(value) -> int | None:
+    try:
+        return int(str(value).strip())
+    except (ValueError, TypeError):
+        return None
+
+
+def persist_extraction(
+    session,
+    *,
+    supplier_id: str,
+    product_id: str,
+    url: str,
+    fields: dict[str, object],
+    retrieved_at: datetime,
+) -> str:
+    """Persist extracted fields as an ``Offer`` plus one ``Evidence`` row each.
+
+    Best-effort maps known field names onto ``Offer`` columns: ``available_units``
+    -> ``available_quantity`` and ``price_hkd`` -> ``unit_price_minor`` (via
+    tolerant HKD parsing). Returns the offer id.
+    """
+    from .money import parse_hkd_minor
+
+    offer_id = f"{supplier_id}:{product_id}"
+    offer = session.get(Offer, offer_id)
+    if offer is None:
+        offer = Offer(id=offer_id, supplier_id=supplier_id, product_id=product_id)
+
+    if "available_units" in fields:
+        offer.available_quantity = _to_int(fields["available_units"])
+    if "price_hkd" in fields:
+        minor = parse_hkd_minor(fields["price_hkd"])
+        if minor is not None:
+            offer.unit_price_minor = minor
+
+    session.add(offer)
+    session.flush()
+
+    for field, value in fields.items():
+        session.add(
+            Evidence(
+                id=f"{offer_id}:{field}",
+                offer_id=offer_id,
+                url=url,
+                retrieved_at=retrieved_at,
+                field=field,
+                extracted_value=str(value),
+            )
+        )
+    session.commit()
+    return offer_id
