@@ -1,8 +1,8 @@
-# PurchasePilot
+# Procurement-agent
 
 Browser-assisted procurement agent 
 
-AgenticProcurement onverts an employee's equipment request into a traceable supplier
+PurchasePilot converts an employee's equipment request into a traceable supplier
 comparison and an approval-ready purchase requisition. It researches supplier
 websites with Stagehand, extracts product evidence, applies explicit purchasing
 rules in Python, and explains its recommendation. A human reviews the exact
