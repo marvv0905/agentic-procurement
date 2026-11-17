@@ -63,7 +63,7 @@ def _update_draft(text: str, current: RequestDraft | None) -> RequestDraft:
     return asyncio.run(_run())
 
 
-def _draft_markdown(d: RequestDraft) -> str:
+def _draft_markdown(d: RequestDraft, user: dict) -> str:
     lines = [
         f"- **Category:** {d.category or '—'}",
         f"- **Quantity:** {d.quantity or '—'}",
@@ -73,7 +73,7 @@ def _draft_markdown(d: RequestDraft) -> str:
             lines.append(f"- **Item:** {d.attributes['item']}")
         if d.attributes.get("keywords"):
             lines.append(
-                f"- **Required keywords:** {', '.join(d.attributes['keywords'])}"
+                f"- **Must-have words:** {', '.join(d.attributes['keywords'])}"
             )
     else:
         spec = CATEGORIES.get(d.category or "")
@@ -87,7 +87,10 @@ def _draft_markdown(d: RequestDraft) -> str:
     lines.append(f"- **Minimum warranty:** {d.warranty_months_min or '—'} months")
     lines.append(f"- **Budget (max):** HK${d.max_total_hkd}")
     lines.append(f"- **Needed by:** {d.deadline or '— (decide later)'}")
-    lines.append(f"- **Department:** {d.department or '—'}")
+    lines.append(
+        f"- **Department:** {d.department or user.get('department') or '—'} "
+        "(from your account)"
+    )
     if d.preferences:
         lines.append(f"- **Preferences:** {d.preferences}")
     return "\n".join(lines)
@@ -314,7 +317,10 @@ def render(engine, user: dict) -> None:
 
             try:
                 draft_to_request(
-                    draft, request_id="chat", requester=user["display_name"]
+                    draft,
+                    request_id="chat",
+                    requester=user["display_name"],
+                    requester_department=user.get("department") or "",
                 )
             except ClarificationNeeded as exc:
                 fields = ", ".join(exc.missing_fields)
@@ -324,7 +330,7 @@ def render(engine, user: dict) -> None:
                 _assistant(session, row, msg)
                 st.stop()
 
-            parts = ["Here's what I understood:\n\n" + _draft_markdown(draft)]
+            parts = ["Here's what I understood:\n\n" + _draft_markdown(draft, user)]
             if draft.out_of_scope:
                 parts.append(
                     "\n*(Note: I only source office equipment — ignoring: "
@@ -354,7 +360,10 @@ def render(engine, user: dict) -> None:
             if col1.button("Confirm", type="primary"):
                 try:
                     request = draft_to_request(
-                        draft, request_id="chat", requester=user["display_name"]
+                        draft,
+                        request_id="chat",
+                        requester=user["display_name"],
+                        requester_department=user.get("department") or "",
                     )
                 except ClarificationNeeded as exc:
                     st.error(f"I still need: **{', '.join(exc.missing_fields)}**.")

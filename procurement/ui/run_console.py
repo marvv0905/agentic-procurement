@@ -28,7 +28,7 @@ import io
 
 import streamlit as st
 
-from .. import events, order_service
+from .. import events, frames, order_service
 from ..evaluation import counts as verdict_counts
 from ..evaluation import order_verdicts
 from ..money import format_hkd
@@ -363,6 +363,13 @@ def _panel_run(order, track) -> None:
             '<p class="pp-kicker">What the agent is doing</p>',
             unsafe_allow_html=True,
         )
+        frame = frames.latest(order.id)
+        if frame is not None:
+            st.image(frame.data, width="stretch")
+            st.caption(
+                "The agent's browser — the latest page it opened or is "
+                "reading. Updates as it moves."
+            )
         st.markdown(_viewer_html(order, track), unsafe_allow_html=True)
         st.markdown(_track_html(order, track), unsafe_allow_html=True)
 

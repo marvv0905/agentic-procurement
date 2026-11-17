@@ -47,6 +47,24 @@ def test_create_user_and_login():
     assert auth.login(session, "ghost", "hunter2") is None
 
 
+def test_create_user_stores_department():
+    session = _session()
+    user = auth.create_user(
+        session,
+        username="carol",
+        display_name="Carol Lee",
+        role=auth.ROLE_EMPLOYEE,
+        password="pw",
+        department="Accounting",
+    )
+    assert user.department == "Accounting"
+
+    bare = auth.create_user(
+        session, username="dan", display_name="Dan", role=auth.ROLE_EMPLOYEE, password="pw"
+    )
+    assert bare.department is None
+
+
 def test_login_rejects_inactive_user():
     session = _session()
     user = auth.create_user(

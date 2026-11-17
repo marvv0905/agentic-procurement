@@ -45,8 +45,13 @@ def draft_to_request(
     request_id: str,
     requester: str,
     now: datetime | None = None,
+    requester_department: str = "",
 ) -> PurchaseRequest:
     """Convert a confirmed draft into a validated request.
+
+    ``requester_department`` is the requester's account department — orders
+    are auto-assigned from it, so a draft never needs to carry one (a stated
+    department in the conversation still wins).
 
     Raises :class:`ClarificationNeeded` listing the fields that still need
     confirmation rather than guessing.
@@ -67,8 +72,6 @@ def draft_to_request(
             missing.append("required keywords")
     if not draft.quantity or draft.quantity <= 0:
         missing.append("quantity")
-    if not draft.department:
-        missing.append("department")
     if draft.max_total_hkd is None:
         missing.append("max_total_hkd")
     if missing:
@@ -94,6 +97,12 @@ def draft_to_request(
             "item": str(draft.attributes.get("item", "")).strip(),
             "keywords": [str(k).strip() for k in (draft.attributes.get("keywords") or []) if str(k).strip()],
         }
+        # The intake LLM distills a ready-to-type search query; research uses
+        # it verbatim (wizard-created orders simply omit it and research
+        # falls back to the deduplicated item+keywords join).
+        search_query = str(draft.attributes.get("search_query") or "").strip()
+        if search_query:
+            attributes["search_query"] = search_query
     else:
         attributes = {
             key: value
@@ -110,7 +119,7 @@ def draft_to_request(
     return PurchaseRequest(
         request_id=request_id,
         requester=requester,
-        department=draft.department,
+        department=(draft.department or "").strip() or requester_department,
         category=draft.category,
         quantity=draft.quantity,
         max_total_cost_minor=budget_minor,

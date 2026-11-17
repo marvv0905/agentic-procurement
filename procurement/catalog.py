@@ -34,6 +34,9 @@ class CategorySpec:
     id: str
     label: str
     attributes: tuple[AttributeSpec, ...]
+    #: Traditional Chinese label used as a live-site search fallback (HK
+    #: aggregators index product titles in Chinese).
+    label_zh: str | None = None
 
     @property
     def attribute_map(self) -> dict[str, AttributeSpec]:
@@ -52,6 +55,7 @@ CATEGORIES: dict[str, CategorySpec] = {
     "monitor": CategorySpec(
         id="monitor",
         label="Monitor",
+        label_zh="顯示器",
         attributes=(
             AttributeSpec("screen_inches_min", INT, label="screen size (inches)"),
             AttributeSpec(
@@ -69,6 +73,7 @@ CATEGORIES: dict[str, CategorySpec] = {
     "keyboard": CategorySpec(
         id="keyboard",
         label="Keyboard",
+        label_zh="鍵盤",
         attributes=(
             AttributeSpec(
                 "layout", STR, choices=("full-size", "tenkeyless", "75%", "60%")
@@ -80,6 +85,7 @@ CATEGORIES: dict[str, CategorySpec] = {
     "chair": CategorySpec(
         id="chair",
         label="Office chair",
+        label_zh="辦公椅",
         attributes=(
             AttributeSpec("material", STR, choices=("mesh", "fabric", "leather")),
             AttributeSpec("armrests", BOOL),

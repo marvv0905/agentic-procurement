@@ -110,7 +110,7 @@ def pretty_requirements_pairs(requirements_json: str | None) -> list[tuple[str, 
             pairs.append(("Item", _format_value(item)))
         keywords = attributes.get("keywords") or []
         if keywords:
-            pairs.append(("Required keywords", _format_value(keywords)))
+            pairs.append(("Must-have words", _format_value(keywords)))
     else:
         for attr in (spec.attributes if spec else []):
             if attr.name in attributes and attributes[attr.name] is not None:

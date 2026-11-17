@@ -107,7 +107,9 @@ async def _research(engine, order_id: int) -> None:
                 supplier_id=supplier.id,
             )
             try:
-                evidences = await research_supplier(request, supplier)
+                evidences = await research_supplier(
+                    request, supplier, order_id=order_id
+                )
             except Exception as exc:  # a broken site must not kill the run
                 logger.warning("research failed for %s: %s", supplier.name, exc)
                 events.emit(
