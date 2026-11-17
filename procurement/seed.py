@@ -158,6 +158,8 @@ DEFAULT_MOCK_BASE_URL = "http://127.0.0.1:8100"
 ADMIN_USERNAME = "admin"
 ADMIN_DISPLAY_NAME = "Admin"
 ADMIN_DEFAULT_PASSWORD = "admin123"
+#: The seeded admin's department (orders created by admin carry it).
+ADMIN_DEFAULT_DEPARTMENT = "Procurement"
 
 
 def seed_core(session) -> dict:
@@ -180,6 +182,7 @@ def seed_core(session) -> dict:
             username=ADMIN_USERNAME,
             display_name=ADMIN_DISPLAY_NAME,
             role="manager",
+            department=ADMIN_DEFAULT_DEPARTMENT,
             password_hash=auth.hash_password(
                 os.getenv("DEMO_ADMIN_PASSWORD", ADMIN_DEFAULT_PASSWORD)
             ),
@@ -188,6 +191,9 @@ def seed_core(session) -> dict:
         )
         session.add(admin)
         session.flush()
+    elif admin.department is None:
+        # Backfill accounts created before departments existed.
+        admin.department = ADMIN_DEFAULT_DEPARTMENT
     seeded["admin"] = admin.id
 
     for sup in generate().suppliers:

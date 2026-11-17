@@ -14,6 +14,7 @@ import re
 from collections.abc import Iterable, Sequence
 from datetime import date
 
+from . import embeddings
 from .catalog import BOOL, CATEGORIES, INT, LIST, OTHER_CATEGORY, STR, AttributeSpec
 from .money import verified_total
 from .schemas import (
@@ -60,34 +61,72 @@ def _keyword_checks(req: RequestRequirements, offer: OfferEvidence) -> list[Fiel
     """Free-text category validation: every requested keyword must appear in
     the offer's extracted specifications text (or its model name).
 
-    Deterministic substring matching — the LLM only extracted the text; Python
-    decides eligibility. Matching is normalized (case, hyphens, punctuation)
-    so "noise cancelling" matches "Noise-Cancelling". A keyword nobody stated
-    is UNKNOWN, never assumed.
+    Primary check: deterministic substring matching — the LLM only extracted
+    the text; Python decides eligibility. Matching is normalized (case,
+    hyphens, punctuation) so "noise cancelling" matches "Noise-Cancelling",
+    and runs against the English translation *and* the page's original
+    language, so a Traditional Chinese keyword like 降噪 matches the
+    untranslated evidence too.
+
+    Fallback (Lab 3): a keyword whose substring match fails is scored
+    against the spec text by local multilingual sentence embeddings (max
+    cosine over sentence chunks). At/above the pass threshold it is a PASS
+    (a paraphrase or translation of the keyword is stated); in the uncertain
+    band it is UNKNOWN — weaker than a literal string and never assumed;
+    below that, FAIL. A keyword nobody stated is UNKNOWN, never assumed.
     """
     def normalize(text: str) -> str:
         return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", " ", text.lower()).strip()
 
-    spec_text = normalize(
-        " ".join(
-            str(v)
-            for v in (offer.model_name, offer.attributes.get("specifications"), " ")
-            if v
+    spec_parts = [
+        str(v)
+        for v in (
+            offer.model_name,
+            offer.attributes.get("specifications"),
+            offer.attributes.get("specifications_original"),
         )
-    )
+        if v
+    ]
+    spec_text = normalize(" ".join(spec_parts))
+    # The raw (un-normalized) text carries the natural phrasing the
+    # embedding model was trained on; the semantic fallback scores it.
+    raw_spec_text = " ".join(spec_parts)
+
     checks: list[FieldValidation] = []
-    keywords = req.attributes.get("keywords") or []
+    keywords = [k for k in (req.attributes.get("keywords") or []) if isinstance(k, str) and k.strip()]
+    passed: set[str] = set()
     for keyword in keywords:
-        if not isinstance(keyword, str) or not keyword.strip():
-            continue
         if normalize(keyword) in spec_text:
             checks.append(
                 _check(keyword.strip(), ValidationStatus.PASS, "appears in the product specifications")
             )
-        else:
+            passed.add(keyword.strip())
+    missing = [k.strip() for k in keywords if k.strip() not in passed]
+    # One batched embedding pass scores every substring-missed keyword.
+    semantic = embeddings.semantic_keyword_scores(missing, raw_spec_text) if missing else None
+    for keyword in missing:
+        score = (semantic or {}).get(keyword)
+        if score is not None and score >= embeddings.SEMANTIC_PASS_THRESHOLD:
             checks.append(
-                _check(keyword.strip(), ValidationStatus.FAIL, "not found in the extracted specifications")
+                _check(
+                    keyword,
+                    ValidationStatus.PASS,
+                    f"semantic match in the specifications (cosine {score:.2f})",
+                )
             )
+        elif score is not None and score >= embeddings.SEMANTIC_UNKNOWN_THRESHOLD:
+            checks.append(
+                _check(
+                    keyword,
+                    ValidationStatus.UNKNOWN,
+                    f"possible semantic match in the specifications (cosine {score:.2f}) — not literally stated",
+                )
+            )
+        else:
+            reason = "not found in the extracted specifications"
+            if score is not None:
+                reason += f" (closest semantic match cosine {score:.2f})"
+            checks.append(_check(keyword, ValidationStatus.FAIL, reason))
     if not checks:
         checks.append(
             _check("item keywords", ValidationStatus.UNKNOWN, "no required keywords were extracted")

@@ -27,6 +27,7 @@ def render(engine, user: dict) -> None:
             username = st.text_input("Username")
             display_name = st.text_input("Display name")
             role = st.selectbox("Role", auth.ROLES)
+            department = st.selectbox("Department", auth.DEPARTMENTS)
             password = st.text_input("Initial password", type="password")
             submitted = st.form_submit_button("Create user", type="primary")
         if submitted:
@@ -41,6 +42,7 @@ def render(engine, user: dict) -> None:
                         display_name=display_name,
                         role=role,
                         password=password,
+                        department=department,
                     )
                 except ValueError as exc:
                     st.error(f"Could not create user: {exc}")
@@ -58,6 +60,7 @@ def render(engine, user: dict) -> None:
             "Username": u.username,
             "Display name": u.display_name,
             "Role": u.role.title(),
+            "Department": u.department or "—",
             "Status": "Active" if u.active else "Inactive",
             "Created": u.created_at.strftime("%Y-%m-%d"),
         }
@@ -102,6 +105,24 @@ def render(engine, user: dict) -> None:
             st.rerun()
 
     with col2:
+        new_department = st.selectbox(
+            "Department",
+            auth.DEPARTMENTS,
+            index=(
+                auth.DEPARTMENTS.index(target.department)
+                if target.department in auth.DEPARTMENTS
+                else 0
+            ),
+        )
+        if st.button("Save department", disabled=(new_department == target.department)):
+            Session = session_factory(engine)
+            with Session() as session:
+                row = session.get(User, target.id)
+                row.department = new_department
+                session.commit()
+            st.success(f"{target.username}'s department is now {new_department}.")
+            st.rerun()
+
         st.markdown(
             f"- **Status:** {'Active' if target.active else 'Inactive'}\n"
             f"- **Created:** {target.created_at.strftime('%Y-%m-%d')}"

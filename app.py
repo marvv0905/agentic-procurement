@@ -135,6 +135,10 @@ with st.sidebar:
         st.session_state.pop("chat_session_id", None)
         st.session_state.pop("draft", None)
         st.session_state.pop("draft_for_session", None)
+        # Wizard keys too — a stale draft id must never cross accounts.
+        st.session_state.pop("wizard", None)
+        st.session_state.pop("wizard_order_id", None)
+        st.session_state.pop("wizard_submitted_order", None)
         st.rerun()
 
 nav.run()

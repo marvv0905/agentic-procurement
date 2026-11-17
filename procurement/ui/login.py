@@ -30,5 +30,6 @@ def render(engine) -> None:
                 "username": user.username,
                 "display_name": user.display_name,
                 "role": user.role,
+                "department": user.department or "",
             }
             st.rerun()

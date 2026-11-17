@@ -31,15 +31,36 @@ click==8.5.1
     # via
     #   streamlit
     #   uvicorn
+cloudpickle==3.1.2
+    # via joblib
+colorama==0.4.6 ; sys_platform == 'win32'
+    # via tqdm
+cuda-bindings==13.5.0 ; sys_platform == 'linux'
+    # via torch
+cuda-pathfinder==1.9.0 ; sys_platform == 'linux'
+    # via cuda-bindings
+cuda-toolkit==13.2.2 ; sys_platform == 'linux'
+    # via torch
 distro==1.9.0
     # via browserbase
 fastapi==0.162.2
     # via purchasepilot
+filelock==4.2.11
+    # via
+    #   huggingface-hub
+    #   torch
+    #   transformers
+fsspec==2026.9.0
+    # via
+    #   huggingface-hub
+    #   torch
 h11==0.16.0
     # via
     #   httpcore
     #   httpcore2
     #   uvicorn
+hf-xet==1.8.0 ; platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
+    # via huggingface-hub
 httpcore==1.0.9
     # via httpx
 httpcore2==2.16.0 ; sys_platform != 'emscripten'
@@ -52,6 +73,11 @@ httpx2==2.16.0
     # via openai
 httpx2-jsfetch==1.0 ; sys_platform == 'emscripten'
     # via httpx2
+huggingface-hub==0.36.2
+    # via
+    #   sentence-transformers
+    #   tokenizers
+    #   transformers
 idna==3.20
     # via
     #   anyio
@@ -65,21 +91,74 @@ jinja2==3.1.6
     #   altair
     #   purchasepilot
     #   pydeck
+    #   torch
 jiter==0.19.0
     # via openai
+joblib==1.6.0
+    # via scikit-learn
 jsonschema==4.26.0
     # via altair
 jsonschema-specifications==2025.9.1
     # via jsonschema
 markupsafe==3.0.4
     # via jinja2
+mpmath==1.3.0
+    # via sympy
 narwhals==2.28.0
-    # via altair
+    # via
+    #   altair
+    #   scikit-learn
+networkx==3.7
+    # via torch
 numpy==2.5.4
     # via
     #   pandas
     #   pydeck
+    #   scikit-learn
+    #   scipy
     #   streamlit
+    #   transformers
+nvidia-cublas==13.4.1.3 ; sys_platform == 'linux'
+    # via
+    #   cuda-toolkit
+    #   nvidia-cudnn-cu13
+    #   nvidia-cusolver
+nvidia-cuda-cccl==13.3.5.0.6 ; sys_platform == 'linux'
+    # via nvidia-nvshmem-cu13
+nvidia-cuda-cupti==13.2.86 ; (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')
+    # via cuda-toolkit
+nvidia-cuda-nvrtc==13.2.86 ; sys_platform == 'linux'
+    # via
+    #   cuda-toolkit
+    #   nvidia-cublas
+nvidia-cuda-runtime==13.2.86 ; (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')
+    # via cuda-toolkit
+nvidia-cudnn-cu13==9.26.0.51 ; sys_platform == 'linux'
+    # via torch
+nvidia-cufft==12.2.0.57 ; (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')
+    # via cuda-toolkit
+nvidia-cufile==1.17.1.22 ; (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')
+    # via cuda-toolkit
+nvidia-cusolver==12.2.0.11 ; (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')
+    # via cuda-toolkit
+nvidia-cusparse==12.7.10.12 ; (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')
+    # via
+    #   cuda-toolkit
+    #   nvidia-cusolver
+nvidia-cusparselt-cu13==0.8.1 ; sys_platform == 'linux'
+    # via torch
+nvidia-nccl-cu13==2.30.7 ; sys_platform == 'linux'
+    # via torch
+nvidia-nvjitlink==13.5.37 ; (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')
+    # via
+    #   cuda-toolkit
+    #   nvidia-cufft
+    #   nvidia-cusolver
+    #   nvidia-cusparse
+nvidia-nvshmem-cu13==3.7.2 ; sys_platform == 'linux'
+    # via torch
+nvidia-nvtx==13.2.86 ; (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')
+    # via cuda-toolkit
 openai==3.46.0
     # via purchasepilot
 opentelemetry-api==1.45.2
@@ -89,11 +168,15 @@ opentelemetry-api==1.45.2
 packaging==26.3
     # via
     #   altair
+    #   huggingface-hub
     #   streamlit
+    #   transformers
 pandas==3.1.1
     # via streamlit
 pillow==13.0.0
-    # via streamlit
+    # via
+    #   sentence-transformers
+    #   streamlit
 protobuf==7.36.2
     # via streamlit
 pyarrow==26.0.1
@@ -115,16 +198,37 @@ python-dotenv==1.2.4
     # via purchasepilot
 python-multipart==0.0.33
     # via streamlit
+pyyaml==6.0.3
+    # via
+    #   huggingface-hub
+    #   transformers
 referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
+regex==2026.11.15
+    # via transformers
 requests==2.34.2
-    # via streamlit
+    # via
+    #   huggingface-hub
+    #   streamlit
+    #   transformers
 rpds-py==2026.9.1
     # via
     #   jsonschema
     #   referencing
+safetensors==0.8.0
+    # via transformers
+scikit-learn==1.9.1
+    # via sentence-transformers
+scipy==1.18.1
+    # via
+    #   scikit-learn
+    #   sentence-transformers
+sentence-transformers==4.1.0
+    # via purchasepilot
+setuptools==84.2.1
+    # via torch
 sniffio==1.3.1
     # via
     #   browserbase
@@ -139,6 +243,23 @@ starlette==1.10.0
     #   streamlit
 streamlit==1.67.0
     # via purchasepilot
+sympy==1.14.0
+    # via torch
+threadpoolctl==3.8.0
+    # via scikit-learn
+tokenizers==0.22.2
+    # via transformers
+torch==2.15.0
+    # via sentence-transformers
+tqdm==4.70.1
+    # via
+    #   huggingface-hub
+    #   sentence-transformers
+    #   transformers
+transformers==4.57.6
+    # via sentence-transformers
+triton==3.9.0 ; sys_platform == 'linux'
+    # via torch
 truststore==0.10.5 ; sys_platform != 'emscripten'
     # via
     #   httpcore2
@@ -150,15 +271,18 @@ typing-extensions==4.16.0
     #   browserbase
     #   fastapi
     #   httpx2
+    #   huggingface-hub
     #   openai
     #   opentelemetry-api
     #   pydantic
     #   pydantic-core
     #   referencing
+    #   sentence-transformers
     #   sqlalchemy
     #   stagehand
     #   starlette
     #   streamlit
+    #   torch
     #   typing-inspection
 typing-inspection==0.4.5
     # via

@@ -16,6 +16,18 @@ ROLE_MANAGER = "manager"
 ROLE_EMPLOYEE = "employee"
 ROLES = (ROLE_MANAGER, ROLE_EMPLOYEE)
 
+#: The company's departments. Every member account carries one, and every
+#: order they create is auto-assigned from it.
+DEPARTMENTS = (
+    "Engineering",
+    "Accounting",
+    "Human Resources",
+    "Marketing",
+    "Operations",
+    "Legal",
+    "Procurement",
+)
+
 _ITERATIONS = 240_000
 
 
@@ -54,6 +66,7 @@ def create_user(
     display_name: str,
     role: str,
     password: str,
+    department: str | None = None,
 ) -> User:
     """Create a user. Raises ``ValueError`` on duplicate username or bad role."""
     from datetime import datetime, timezone
@@ -72,6 +85,7 @@ def create_user(
         username=username,
         display_name=display_name.strip() or username,
         role=role,
+        department=(department or "").strip() or None,
         password_hash=hash_password(password),
         active=True,
         created_at=datetime.now(timezone.utc),

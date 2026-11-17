@@ -40,6 +40,8 @@ class User(Base):
     username: Mapped[str] = mapped_column(String, unique=True)
     display_name: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String, default="employee")
+    #: The member's department — orders are auto-assigned from it.
+    department: Mapped[str | None] = mapped_column(String, nullable=True)
     password_hash: Mapped[str] = mapped_column(String)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -236,6 +238,7 @@ def _ensure_columns(engine) -> None:
 
     migrations: dict[str, list[str]] = {
         "suppliers": ["ALTER TABLE suppliers ADD COLUMN catalog_url TEXT"],
+        "users": ["ALTER TABLE users ADD COLUMN department TEXT"],
     }
     inspector = inspect(engine)
     existing = set(inspector.get_table_names())

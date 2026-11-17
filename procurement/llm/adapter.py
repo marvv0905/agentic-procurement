@@ -15,7 +15,7 @@ from typing import Any
 from openai import AsyncOpenAI
 
 from ..schemas import RequestDraft
-from .prompts import PROMPT_VERSION, build_request_prompt
+from .prompts import PROMPT_VERSION, build_request_messages
 
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-chat"
@@ -42,7 +42,7 @@ class ConfigurableLLM:
 
         if not self.api_key:
             raise ValueError(
-                "DEEPSEEK_API_KEY is not set. Copy .env.example to .env and fill it in."
+                "DEEPSEEK_API_KEY is not set. Copy example.env to .env and fill it in."
             )
         self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
 
@@ -70,6 +70,34 @@ class ConfigurableLLM:
         )
         return json.loads(response.choices[0].message.content or "{}")
 
+    async def structured_messages(
+        self, messages: list[dict[str, str]], schema: dict[str, Any], **options: Any
+    ) -> dict[str, Any]:
+        """Structured call with chat-style roles (system/user split, Lab 2).
+
+        The JSON-schema instruction is appended to the last user message so
+        the contract stays with the run-specific content.
+        """
+        schema_instruction = (
+            "\n\nReturn a single JSON object matching this schema:\n"
+            f"{json.dumps(schema, ensure_ascii=False)}"
+        )
+        payload = [dict(m) for m in messages]
+        if payload and payload[-1]["role"] == "user":
+            payload[-1] = {
+                "role": "user",
+                "content": payload[-1]["content"] + schema_instruction,
+            }
+        else:
+            payload.append({"role": "user", "content": schema_instruction.strip()})
+        response = await self._client.chat.completions.create(
+            model=self.model,
+            messages=payload,
+            response_format={"type": "json_object"},
+            **options,
+        )
+        return json.loads(response.choices[0].message.content or "{}")
+
     async def update_draft(
         self, text: str, current_draft: RequestDraft | None = None
     ) -> RequestDraft:
@@ -79,6 +107,6 @@ class ConfigurableLLM:
         messages (corrections, answers to clarifications) merge instead of
         starting over.
         """
-        prompt = build_request_prompt(text, current_draft)
-        data = await self.structured(prompt, RequestDraft.model_json_schema())
+        messages = build_request_messages(text, current_draft)
+        data = await self.structured_messages(messages, RequestDraft.model_json_schema())
         return RequestDraft.model_validate(data)

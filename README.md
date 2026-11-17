@@ -1,4 +1,4 @@
-# Procurement-agent
+# PurchasePilot
 
 Browser-assisted procurement agent
 
@@ -11,6 +11,61 @@ and approves before the order is placed.
 The prototype stops at order placement. It does not process payments, sign
 contracts, or guarantee supplier fulfillment.
 
+## What it can do
+
+**Ordering (any employee)**
+- **Chatbot** — persistent LLM chat sessions that turn a plain-language request
+  into a purchase order. Messages and the running draft survive refreshes
+  (the 5 most recent sessions are kept); confirming a draft creates the order
+  and starts agent research.
+- **Order Request wizard** — type what you need in your own words; the same
+  intake parser reads the sentence and fills the form (category, specs,
+  quantity, budget). Specs you set become hard checks; anything left as
+  *No preference* is never enforced. Half-finished requests autosave as DRAFT
+  rows that survive a refresh and can be resumed or discarded.
+- **Typed catalog + free text** — three typed categories (monitor, keyboard,
+  office chair) are validated against explicit attributes. Anything else
+  routes to the free-text **Other** flow: the agent searches supplier sites
+  for the request and rejects listings that don't mention every must-have
+  keyword — so users can order e.g. noise-cancelling headphones.
+- **All Orders** — read-only history of every order for everyone, with the
+  full decision trail.
+
+**Agent research (background thread per order)**
+- Browses **every approved supplier site** with a real Stagehand browser,
+  extracting offers from browser-visible evidence — never from seed data or
+  hidden fixtures. Works on the seeded mock sites and on **live aggregator
+  sites** (Price.com.hk is seeded as an approved supplier).
+- A **deterministic Python rules engine** — not the LLM — performs all
+  arithmetic, eligibility, and state transitions, and selects the lowest
+  verified compliant total. Unknown facts stay unknown (three-valued
+  logic), never silently zero.
+- **Bilingual semantic matching** — a local, free multilingual sentence
+  embedding model matches paraphrases ("ANC" vs "noise cancelling") and
+  cross-language gaps (降噪 vs "active noise cancelling").
+- A **live run console** per order: what the agent understood, what it is
+  doing (live browser viewer + step track), and per-offer PASS / UNKNOWN /
+  FAIL verdicts with reasons — rebuilt deterministically from persisted
+  products, so the panel is correct even after a restart.
+
+**Management (managers only)**
+- **Pending Approvals** — the dedicated decision view; rejecting requires a
+  reason, and every decision lands in the human decision trail.
+- **Contact Sellers** — for approved (PLACED) orders, ask the seller-contact
+  routine to draft a WhatsApp message. The routine asks the manager for
+  approval before anything is sent, and only ever receives the order number,
+  never the order details. Optional; configure via webhook env vars.
+- **Suppliers** — add a plain catalog site (just a URL) or an aggregator /
+  search site (also a `{query}` search URL) with zero agent code changes.
+- **User Management** — add employees; pbkdf2 password hashing; employee and
+  manager roles.
+
+**Engineering**
+- Deterministic pytest suite (unit + integration; no LLM or browser needed).
+- Evaluation harness entry point (`scripts/run_evaluation.py`) and per-offer
+  verdict rebuilding (`procurement/evaluation.py`).
+- All money in integer HKD minor units (cents); no floating-point arithmetic.
+
 ## Setup
 
 ```bash
@@ -18,18 +73,37 @@ uv sync          # creates .venv with Python 3.12 and installs dependencies
 uv run pytest    # run the deterministic test suite
 ```
 
-Copy `.env.example` to `.env` and set `DEEPSEEK_API_KEY` (used by the chatbot
-parser and the Stagehand browser LLM).
+Copy `example.env` to `.env` and fill in the values:
 
-## Status
+| Variable | Required | Purpose |
+|---|---|---|
+| `DEEPSEEK_API_KEY` | yes | Text LLM: intake parser (chatbot + wizard) and decision explanations |
+| `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` | no | Defaults to `https://api.deepseek.com` / `deepseek-chat` |
+| `OPENROUTER_API_KEY` | recommended | Vision model for the Stagehand browser agent |
+| `OPENROUTER_BASE_URL` / `OPENROUTER_MODEL` | no | Use a vision-capable model, e.g. `qwen/qwen3-vl-235b-a22b-instruct` |
+| `DATABASE_URL` | no | SQLite location (default `sqlite:///data/purchasepilot.db`) |
+| `MOCK_BASE_URL` | no | Where the mock supplier sites run (default `http://127.0.0.1:8100`) |
+| `STAGEHAND_HEADLESS` | no | `true`/`false` force headless/visible research; unset = headless for mock sites, visible for aggregators |
+| `DEMO_ADMIN_PASSWORD` | no | Override the seeded admin password (`admin123`) |
+| `GROK_WEBHOOK_URL` / `GROK_WEBHOOK_AUTHORIZATION` | no | Enable the Contact Sellers page (seller-contact routine webhook) |
 
-Multi-page Streamlit UI (chatbot, order wizard, order history, manager
-approvals, supplier and user management) on top of a human-record SQLite
-schema. The agent researches the seeded mock supplier sites with Stagehand,
-and also supports **live aggregator sites** (Price.com.hk is seeded as an
-approved supplier): free-text order requests are searched live and deep-
-scraped within a strict exploration budget. Free-text ("Other") categories
-let users order anything, validated by deterministic keyword matching.
+Without OpenRouter credentials the browser agent falls back to DeepSeek
+(text-only). Without the webhook variables the Contact Sellers page simply
+reports that seller contact isn't configured.
+
+### Semantic matching (local sentence embeddings)
+
+Keyword checks and listing ranking use a **local, free multilingual sentence
+embedding model** so paraphrases ("ANC" vs "noise cancelling") and
+cross-language gaps (降噪 vs "active noise cancelling") match without
+depending on the extraction LLM's translation. Warm the local cache once:
+
+```bash
+uv run python scripts/download_embedding_model.py
+```
+
+Without the cached model everything degrades gracefully to exact substring
+matching — a purchase run never fails because the model is missing.
 
 ## Running the demo
 
@@ -44,10 +118,10 @@ uv run streamlit run app.py
 #    admin / admin123   (override with DEMO_ADMIN_PASSWORD)
 ```
 
-Set `MOCK_BASE_URL` if the mock sites run elsewhere. Aggregator suppliers
-(Price.com.hk) sit behind Cloudflare, so their research automatically runs in
-a **visible browser window** — you can watch it shop. Set `STAGEHAND_HEADLESS=false`
-to make all research visible, `true` to force headless.
+Aggregator suppliers (Price.com.hk) sit behind Cloudflare, so their research
+automatically runs in a **visible browser window** — you can watch it shop.
+Set `STAGEHAND_HEADLESS=false` to make all research visible, `true` to force
+headless.
 
 Managers add employees under **User Management**. Any user can create an order
 via the **Chatbot** or the **Order Request** wizard — typed categories
@@ -79,18 +153,21 @@ app.py                     # Streamlit shell: login gate + st.navigation router
 procurement/               # deterministic core + agent blackbox
   controller.py           # workflow controller / state machine (in-memory)
   states.py               # WorkflowState enum + transition graph
-  schemas.py               # Pydantic models
+  schemas.py              # Pydantic models
+  catalog.py              # category/attribute catalog (single source of truth)
   money.py                 # integer minor-unit (HKD cents) arithmetic
   rules.py                 # business rules (§5)
   auth.py                  # pbkdf2 password hashing + login
   order_service.py         # order lifecycle + human decisions
   chat_service.py          # chat session/message persistence (5-session cap)
+  evaluation.py            # per-offer verdicts rebuilt from the human record
+  embeddings.py            # local multilingual sentence embeddings
   research.py              # blackbox research orchestrator (background thread)
   seed.py                  # synthetic data generator + DB seeding
   repository.py            # SQLAlchemy models + SQLite session
   tools/                   # browser (Stagehand) + supplier research + portal stubs
   llm/                     # configurable LLM adapter + prompts
-  ui/                      # Streamlit page renderers
+  ui/                      # Streamlit page renderers + live run console
 mock_sites/                # FastAPI supplier sites + mock portal
 data/                      # policy + seed configuration
 scripts/                   # seed_demo.py, inspect_db.py, run_evaluation.py
