@@ -112,9 +112,10 @@ def default_message(question: str, *, employee: str, department: str | None,
                     product: str | None) -> str:
     who = f"{employee}" + (f" from the {department} team" if department else "")
     about = f" about {product}" if product else ""
+    body = question.strip() or "[Type your question here]"
     return (
         f"Hello, this is {who}. We're considering a purchase and have a question{about}:\n\n"
-        f"{question.strip()}\n\n"
+        f"{body}\n\n"
         "Could you let us know? Thank you."
     )
 
