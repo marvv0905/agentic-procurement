@@ -125,11 +125,27 @@ def _offer_seller_contact(Session, row, prompt: str, pq) -> None:
     }
 
 
-def _render_seller_inquiry(Session, row, user: dict) -> None:
-    """Yes/No offer, then an editable message the employee sends themselves."""
+def _render_seller_inquiry(Session, row, user: dict, *, drafting: bool = True) -> None:
+    """Yes/No offer, then an editable message the employee sends themselves.
+
+    While a request is still being drafted (not yet confirmed), an "Ask the
+    seller a question" button is always available too.
+    """
     key = _inquiry_key(row)
     inq = st.session_state.get(key)
     if not inq:
+        if drafting and st.button(
+            "Ask the seller a question",
+            key=f"inq_open_{row.id}",
+            icon=":material/chat:",
+            help="Message the seller on WhatsApp before you confirm your request.",
+        ):
+            draft = st.session_state.get("draft")
+            product = None
+            if draft is not None:
+                product = (draft.attributes or {}).get("item") or draft.category
+            st.session_state[key] = {"stage": "compose", "question": "", "product": product}
+            st.rerun()
         return
     draft = st.session_state.get("draft")
     department = getattr(draft, "department", None) or None
@@ -165,9 +181,12 @@ def _render_seller_inquiry(Session, row, user: dict) -> None:
                     "(GROK_WEBHOOK_URL / GROK_WEBHOOK_AUTHORIZATION).")
         if inq.get("error"):
             st.warning(inq["error"])
+        unfilled = "[Type your question here]" in text
+        if unfilled:
+            st.caption("Replace [Type your question here] with your question, then press Send.")
         c1, c2 = st.columns(2)
         if c1.button("Send to seller", key=f"inq_send_{row.id}", type="primary",
-                     disabled=not (ready and text.strip())):
+                     disabled=not (ready and text.strip()) or unfilled):
             with st.spinner("Sending your message to the seller…"):
                 result = seller_inquiry.send_inquiry(
                     text, employee=user["display_name"], department=department,
@@ -318,7 +337,10 @@ def render(engine, user: dict) -> None:
             _assistant(session, row, summary)
 
         # ---- optional: ask the seller about a product (before Confirm) -----
-        _render_seller_inquiry(session, row, user)
+        _render_seller_inquiry(
+            session, row, user,
+            drafting=chat_service.linked_order(session, row) is None,
+        )
 
         # ---- confirm / edit ------------------------------------------------
         st.session_state.setdefault("draft", None)
