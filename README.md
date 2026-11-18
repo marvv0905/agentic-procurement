@@ -1,8 +1,8 @@
-# PurchasePilot
+# Agentic Procurement
 
 Browser-assisted procurement agent
 
-PurchasePilot converts an employee's equipment request into a traceable supplier
+Agentic Procurement converts an employee's equipment request into a traceable supplier
 comparison and an approval-ready purchase requisition. It researches supplier
 websites with Stagehand, extracts product evidence, applies explicit purchasing
 rules in Python, and explains its recommendation. A human (a manager) reviews
@@ -81,7 +81,7 @@ Copy `example.env` to `.env` and fill in the values:
 | `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` | no | Defaults to `https://api.deepseek.com` / `deepseek-chat` |
 | `OPENROUTER_API_KEY` | recommended | Vision model for the Stagehand browser agent |
 | `OPENROUTER_BASE_URL` / `OPENROUTER_MODEL` | no | Use a vision-capable model, e.g. `qwen/qwen3-vl-235b-a22b-instruct` |
-| `DATABASE_URL` | no | SQLite location (default `sqlite:///data/purchasepilot.db`) |
+| `DATABASE_URL` | no | SQLite location (default `sqlite:///data/Agentic Procurement.db`) |
 | `MOCK_BASE_URL` | no | Where the mock supplier sites run (default `http://127.0.0.1:8100`) |
 | `STAGEHAND_HEADLESS` | no | `true`/`false` force headless/visible research; unset = headless for mock sites, visible for aggregators |
 | `DEMO_ADMIN_PASSWORD` | no | Override the seeded admin password (`admin123`) |
@@ -111,7 +111,7 @@ matching — a purchase run never fails because the model is missing.
 # 1. The mock supplier sites (one app serves all three suppliers)
 uv run uvicorn mock_sites.server:app --port 8100
 
-# 2. The Streamlit UI (creates/seed data/purchasepilot.db on first run)
+# 2. The Streamlit UI (creates/seed data/Agentic Procurement.db on first run)
 uv run streamlit run app.py
 
 # 3. Sign in with the seeded manager account
