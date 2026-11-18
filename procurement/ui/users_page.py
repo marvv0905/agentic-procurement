@@ -16,10 +16,6 @@ from .common import require_manager
 def render(engine, user: dict) -> None:
     require_manager(user)
     st.title("User Management")
-    st.caption(
-        "Two demo roles: **employees** and **managers** create order requests; "
-        "only managers approve them. Users are deactivated, never deleted."
-    )
 
     # ---- add user -------------------------------------------------------------
     with st.expander("Add a user"):

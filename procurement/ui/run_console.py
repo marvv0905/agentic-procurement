@@ -155,7 +155,7 @@ def slip_html(order, view, pass_count: int) -> str:
             f"{QUOTATION_TARGET}. The approver will see this."
         )
     if total is not None and total > order.budget_minor:
-        notes.append("The total exceeds the stated budget — the approver will see this.")
+        notes.append("The total exceeds the stated budget.")
 
     eligible_phrase = (
         f" of the {pass_count} eligible offers" if pass_count > 1 else ""
@@ -367,8 +367,7 @@ def _panel_run(order, track) -> None:
         if frame is not None:
             st.image(frame.data, width="stretch")
             st.caption(
-                "The agent's browser — the latest page it opened or is "
-                "reading. Updates as it moves."
+                "Agent browser view"
             )
         st.markdown(_viewer_html(order, track), unsafe_allow_html=True)
         st.markdown(_track_html(order, track), unsafe_allow_html=True)

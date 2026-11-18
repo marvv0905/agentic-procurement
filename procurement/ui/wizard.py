@@ -364,10 +364,7 @@ def render(engine, user: dict) -> None:
             st.session_state.pop("wizard_submitted_order", None)
         else:
             st.title("Order request submitted")
-            st.caption(
-                "The agent browses every approved supplier site, verifies each "
-                "offer against the rules, and queues the best one for approval."
-            )
+
             render_order_status(engine, submitted_id)
             if st.button("Start another request"):
                 st.session_state.pop("wizard_submitted_order", None)
