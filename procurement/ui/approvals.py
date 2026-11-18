@@ -53,7 +53,7 @@ def _reject(engine, user: dict, order_id: int, reason: str) -> None:
 def render(engine, user: dict) -> None:
     require_manager(user)
     st.title("Pending Approvals")
-    st.caption("Orders where the agent found a compliant offer, awaiting approval.")
+
 
     Session = session_factory(engine)
     with Session() as session:

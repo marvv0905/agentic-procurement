@@ -57,6 +57,80 @@ def resolved_total_minor(offer: OfferEvidence, quantity: int) -> int | None:
     return verified_total(offer.unit_price_minor, quantity, offer.shipping_minor)
 
 
+#: Type-conflict nouns for the free-text ("other") item-type check. An offer
+#: whose TITLE is one of these is an accessory, not the requested item: the
+#: brand keyword matches it ("ThinkPad Laptop Backpack" passed every check
+#: for a laptop request), and the cheapest-verified-total ranking then
+#: recommended a HK$125 backpack for a 7-laptop order (PO-2026-0051).
+#: Nouns are grouped by product type: when the requested item already names
+#: ANY noun of a group (item "laptop bag"), no noun of that group conflicts
+#: — the user asked for exactly that kind of accessory.
+_ACCESSORY_GROUPS: tuple[tuple[str, ...], ...] = (
+    ("backpack", "bag", "briefcase", "背包", "電腦袋", "手提袋", "公事包", "行李袋"),
+    ("case", "sleeve", "skin", "cover", "保護套", "保護殼", "保護貼"),
+    ("stand", "holder", "支架", "底座"),
+    ("dock", "docking", "擴充塢"),
+    ("charger", "adapter", "充電器", "火牛"),
+    ("mouse", "mousepad", "mouse pad", "滑鼠", "鼠標"),
+    ("keyboard", "鍵盤"),
+    ("battery", "電池"),
+    ("cable", "kit"),
+)
+
+#: Flat noun list (every group member), for fast substring scans.
+_ACCESSORY_NOUNS: tuple[str, ...] = tuple(
+    noun for group in _ACCESSORY_GROUPS for noun in group
+)
+
+#: Noun -> its group, so the item-side suppression lookup is O(1).
+_NOUN_GROUP: dict[str, tuple[str, ...]] = {
+    noun: group for group in _ACCESSORY_GROUPS for noun in group
+}
+
+
+def is_accessory_conflict(title: str, item: str) -> str | None:
+    """The accessory noun ``title`` carries that ``item`` does not, or None.
+
+    Deterministic substring scan (title and item lowercased). A noun is a
+    conflict only when NO noun of its product-type group appears in the
+    item: "backpack" in a title is fine when the item is a "laptop bag"
+    (same group), but fails a plain "laptop" request. Returns the
+    conflicting noun so callers can name it in their reason strings.
+    """
+    title = (title or "").lower()
+    item = (item or "").lower()
+    if not title or not item:
+        return None
+    for noun in _ACCESSORY_NOUNS:
+        if noun in title:
+            group = _NOUN_GROUP[noun]
+            if not any(member in item for member in group):
+                return noun
+    return None
+
+
+def _item_type_check(req: RequestRequirements, offer: OfferEvidence) -> FieldValidation | None:
+    """Rule 2 (free-text): the offer must be the requested item, not an
+    accessory that happens to carry the same brand keywords.
+
+    Only the conflict case is decidable deterministically — an offer whose
+    title IS a bag/stand/charger fails. The item's absence from the text is
+    deliberately NOT judged (a genuine "ThinkPad T480s" title never says
+    "laptop", and three-valued logic must not block real products).
+    """
+    item = str((req.attributes or {}).get("item") or "").strip()
+    if not item:
+        return None
+    noun = is_accessory_conflict(offer.model_name or "", item)
+    if noun is None:
+        return None
+    return _check(
+        "item_type",
+        ValidationStatus.FAIL,
+        f"offer looks like an accessory ({noun}), not the requested item",
+    )
+
+
 def _keyword_checks(req: RequestRequirements, offer: OfferEvidence) -> list[FieldValidation]:
     """Free-text category validation: every requested keyword must appear in
     the offer's extracted specifications text (or its model name).
@@ -252,6 +326,12 @@ def validate_offer(
         # offer's extracted specifications. The offer itself is labeled
         # "other" by the extraction, so no category mismatch is possible.
         checks.extend(_keyword_checks(req, offer))
+        # Item-type integrity: keywords validate attributes, not product
+        # intent — a "ThinkPad Laptop Backpack" passes the "Thinkpad"
+        # keyword, so the accessory conflict is checked separately.
+        item_check = _item_type_check(req, offer)
+        if item_check is not None:
+            checks.append(item_check)
     elif spec is None:
         checks.append(
             _check("category", ValidationStatus.FAIL, f"unknown category {req.category!r}")

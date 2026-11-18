@@ -46,6 +46,7 @@ _FIELD_LABELS = {
     "verified_total": "Total",
     "category": "Category",
     "item keywords": "Item keywords",
+    "item_type": "Item type",
 }
 
 

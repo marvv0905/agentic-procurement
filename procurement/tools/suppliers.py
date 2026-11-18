@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field
 
 from .. import embeddings
 from ..catalog import BOOL, CATEGORIES, INT, LIST, OTHER_CATEGORY
+from ..rules import is_accessory_conflict
 from ..money import parse_hkd_minor
 from ..schemas import (
     ComparisonResult,
@@ -860,6 +861,27 @@ def _usable_href(href: str | None) -> str | None:
     return None
 
 
+def _drop_accessories(
+    candidates: list[_ListingProduct], request: PurchaseRequest
+) -> list[_ListingProduct]:
+    """Drop candidates whose title is an accessory the item is not.
+
+    A "ThinkPad Laptop Backpack" matches a "Thinkpad" keyword and sorts near
+    the top by price, so without this filter it consumes the scarce
+    deep-scrape budget (and, once scraped, wins the cheapest-verified-total
+    ranking — PO-2026-0051 recommended a HK$125 backpack for a 7-laptop
+    request). Nouns that are part of the requested item never conflict.
+    """
+    item = str(request.mandatory.attributes.get("item") or "").strip()
+    if not item:
+        return candidates
+    return [
+        candidate
+        for candidate in candidates
+        if is_accessory_conflict(candidate.product_name, item) is None
+    ]
+
+
 _NAME_TOKEN_SPLIT = re.compile(r"[^a-z0-9\u4e00-\u9fff]+")
 
 
@@ -1054,6 +1076,11 @@ async def _research_aggregator(browser, request: PurchaseRequest, supplier, star
         for candidate in candidates:
             if not _usable_href(candidate.href):
                 candidate.href = _match_harvest_href(candidate, harvested)
+
+    # Accessories must not consume the scarce deep-scrape budget: a
+    # "ThinkPad Laptop Backpack" matches a "Thinkpad" keyword and ranks
+    # near the top by price (PO-2026-0051).
+    candidates = _drop_accessories(candidates, request)
 
     entries: list[tuple[tuple, str, OfferEvidence]] = []
     actions = 0

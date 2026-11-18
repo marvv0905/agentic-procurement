@@ -21,10 +21,10 @@ from procurement.schemas import OfferEvidence, RequestDraft, ValidationStatus
 from tests.conftest import MONITOR_ATTRIBUTES  # noqa: F401 - fixture module
 
 
-def _other_request(make_request, keywords: list[str], **overrides):
+def _other_request(make_request, keywords: list[str], item: str = "noise cancelling headphones", **overrides):
     return make_request(
         category=OTHER_CATEGORY,
-        attributes={"item": "noise cancelling headphones", "keywords": keywords},
+        attributes={"item": item, "keywords": keywords},
         **overrides,
     )
 
@@ -401,6 +401,108 @@ def test_shop_offer_evidence_shape():
     assert "sony-wh-1000xm5" in evidence.product_id
     assert "--star-tech" in evidence.product_id
     assert evidence.offer_id == "7:sony-wh-1000xm5--star-tech"
+
+
+# --- item-type integrity (PO-2026-0051: ThinkPad backpack) -----------------------
+
+
+def test_item_type_check_fails_accessory(make_request):
+    """PO-2026-0051: a 'ThinkPad Laptop Backpack' passes the 'Thinkpad'
+    keyword but must fail item-type integrity — the offer is not a laptop."""
+    request = _other_request(make_request, ["Thinkpad"], item="laptop")
+    offer = _offer(
+        model_name="Lenovo ThinkPad Laptop Backpack 商務雙肩背包 BP100",
+        attributes={
+            "specifications": "Lenovo ThinkPad Laptop Backpack BP100",
+        },
+    )
+    result = validate_offer(request, offer)
+    check = next(c for c in result.checks if c.field == "item_type")
+    assert check.status is ValidationStatus.FAIL
+    assert "accessory" in check.reason
+    # The keyword itself still passes; the offer fails on item type.
+    keyword = next(c for c in result.checks if c.field == "Thinkpad")
+    assert keyword.status is ValidationStatus.PASS
+    assert result.status is ValidationStatus.FAIL
+
+
+def test_item_type_check_allows_requested_accessory(make_request):
+    """Requesting a bag: 'bag' is part of the item, never a conflict."""
+    request = _other_request(make_request, ["Thinkpad"], item="laptop bag")
+    offer = _offer(model_name="Lenovo ThinkPad Laptop Backpack 商務雙肩背包 BP100")
+    result = validate_offer(request, offer)
+    assert not any(c.field == "item_type" for c in result.checks)
+
+
+def test_item_type_check_genuine_product_untouched(make_request):
+    """A genuine ThinkPad title never says 'laptop' — absence of the item
+    word is deliberately NOT judged (three-valued logic must not block real
+    products); only accessory conflicts are decidable."""
+    request = _other_request(make_request, ["Thinkpad"], item="laptop")
+    offer = _offer(model_name="Lenovo ThinkPad T480s 20L7S02000")
+    result = validate_offer(request, offer)
+    assert not any(c.field == "item_type" for c in result.checks)
+
+
+def test_item_type_check_chinese_noun(make_request):
+    request = _other_request(make_request, ["Thinkpad"], item="laptop")
+    offer = _offer(model_name="ThinkPad 商務背包 L15")
+    result = validate_offer(request, offer)
+    check = next(c for c in result.checks if c.field == "item_type")
+    assert check.status is ValidationStatus.FAIL
+
+
+def test_is_accessory_conflict_direct():
+    from procurement.rules import is_accessory_conflict
+
+    assert is_accessory_conflict("Lenovo ThinkPad Laptop Backpack BP100", "laptop") == "backpack"
+    assert is_accessory_conflict("ThinkPad 商務背包 L15", "laptop") == "背包"
+    # The noun is part of the requested item: no conflict.
+    assert is_accessory_conflict("ThinkPad Wireless Mouse", "wireless mouse") is None
+    assert is_accessory_conflict("Laptop Sleeve 14\"", "laptop sleeve") is None
+    # Nothing to compare.
+    assert is_accessory_conflict("", "laptop") is None
+    assert is_accessory_conflict("Anything", "") is None
+
+
+def test_drop_accessories_guards_deep_scrape_fence():
+    from procurement.tools.suppliers import _ListingProduct, _drop_accessories, _rank_listing
+
+    request = _make_request_helper(
+        category=OTHER_CATEGORY,
+        attributes={"item": "laptop", "keywords": ["Thinkpad"]},
+    )
+    candidates = [
+        # The backpack matches the 'Thinkpad' keyword and is cheapest: without
+        # the filter it would take the first deep-scrape slot.
+        _ListingProduct(
+            product_name="Lenovo ThinkPad Laptop Backpack 商務雙肩背包 BP100",
+            price_hkd="HK$125",
+            description="ThinkPad backpack",
+        ),
+        _ListingProduct(
+            product_name="Lenovo ThinkPad T480s 20L7S02000",
+            price_hkd="HK$5,500",
+            description="ThinkPad T480s",
+        ),
+    ]
+    ranked = _rank_listing(candidates, request)
+    # Whatever the semantic tiebreak orders, the backpack is a candidate…
+    assert len(ranked) == 2
+    # …but it never reaches the deep-scrape fence.
+    kept = _drop_accessories(ranked, request)
+    assert [c.product_name for c in kept] == ["Lenovo ThinkPad T480s 20L7S02000"]
+
+
+def test_drop_accessories_no_item_noop():
+    from procurement.tools.suppliers import _ListingProduct, _drop_accessories
+
+    # Typed categories carry no 'item' attribute: the filter is a no-op.
+    request = _make_request_helper(category="monitor", attributes=MONITOR_ATTRIBUTES)
+    candidates = [
+        _ListingProduct(product_name="Laptop Backpack for Monitors", price_hkd="HK$10"),
+    ]
+    assert _drop_accessories(candidates, request) == candidates
 
 
 # --- search phrase: LLM query + deduplicated fallback --------------------------
