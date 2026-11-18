@@ -11,12 +11,6 @@ build/
 .env
 .env.local
 
-# Data / artifacts
-*.db
-*.sqlite
-*.sqlite3
-data/*.db
-
 # Streamlit
 .streamlit/secrets.toml
 
@@ -25,10 +19,8 @@ data/*.db
 .idea/
 .vscode/
 
-
 #serena
 .serena/
-
 
 # Seller-contact attempts written by the Contact Sellers page
 data/seller_contacts.jsonl
